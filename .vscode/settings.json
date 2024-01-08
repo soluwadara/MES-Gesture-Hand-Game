@@ -1,0 +1,13 @@
+{
+    "nrf-connect.toolchain.path": "${nrf-connect.toolchain:2.4.2}",
+    "files.associations": {
+        "device.h": "c",
+        "gpio.h": "c",
+        "state_machine.h": "c",
+        "log.h": "c",
+        "pwm.h": "c",
+        "kernel.h": "c",
+        "sensor.h": "c",
+        "buzzer.h": "c"
+    }
+}

@@ -6,3 +6,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(Gesture_Game)
 
 target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/led.c)
+target_sources(app PRIVATE src/button.c)
+target_sources(app PRIVATE src/state_machine.c)
+
