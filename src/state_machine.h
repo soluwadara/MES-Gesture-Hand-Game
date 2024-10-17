@@ -2,7 +2,6 @@
 #define _STATE_MACHINE_H_
 
 enum state {
-
     START,
     ePICKLEVEL,
     eLEVEL1,

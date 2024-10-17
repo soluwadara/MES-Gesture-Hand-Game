@@ -9,4 +9,7 @@ target_sources(app PRIVATE src/main.c)
 target_sources(app PRIVATE src/led.c)
 target_sources(app PRIVATE src/button.c)
 target_sources(app PRIVATE src/state_machine.c)
+target_sources(app PRIVATE src/buzzer.c)
+target_sources(app PRIVATE src/imu.c)
+
 

@@ -39,20 +39,22 @@ void state_machine_func(void *d0,void *d1,void *d2)
     {
         switch (currentState)
         {
+           // case TEST: 
+                //imu_data_processing();
+            //break;
             case START:
                 led_start();
-                k_msleep(1000);
-                led_blinky();
-           /*     play_startup_song();
+                play_startup_song();
                 next_state(ePICKLEVEL);
-                break;
+            break;
             case ePICKLEVEL:
-                printk("SM: pick level \r\n");
-                led_blinky();
-                k_timer_start(&select_level_timer, K_MSEC(8000), K_MSEC(0)); // 10s to pick a level
-                break;
-           /* case eLEVEL1:  
-                printk("SM:Level 1!\r\n");
+            /* The timer must start before the blinky otherwise it is impossible to have a blinky while trying to start the timer
+            When the timer is done it will stop the blinky */
+               k_timer_start(&select_level_timer, K_MSEC(7000), K_MSEC(0)); // 10s to pick a level
+               led_blinky();
+            break;
+            case eLEVEL1: 
+                led_off(); 
                 play_level_one(); // this is part of the state machine thread because it's called from the SM. 
                 // it dosen't matter what file it is called from it matters where it is called from 
                 printk("Return from playing LEVEL 1!\r\n");
@@ -66,7 +68,7 @@ void state_machine_func(void *d0,void *d1,void *d2)
                 {
                     next_state(END);
                 }
-                break;
+             break;
             case eLEVEL2:
                 printk("SM:Level 2!\r\n");
                 play_level_two();
@@ -81,7 +83,7 @@ void state_machine_func(void *d0,void *d1,void *d2)
                 {
                     next_state(END);
                 }
-                break;
+            break;
             case eLEVEL3:
                 printk("SM:Level 3!\r\n");
                 play_level_three();
@@ -96,9 +98,11 @@ void state_machine_func(void *d0,void *d1,void *d2)
                 {
                     next_state(END);
                 }
+            break;
             case END:
                 play_goodbye_song();
-                break; */
+                play_silence();
+            break; 
         } 
     }
 }
@@ -132,7 +136,7 @@ void next_state(enum state nextState)
         case END:
             printk("Next state:END!\r\n");
             currentState = END;
-           // k_wakeup(state_machine_thd);
+            k_wakeup(state_machine_thd);
             break;
     }
 }
@@ -146,7 +150,10 @@ void select_level_workq_submit() // when timer expires submit for work to be don
 
 void select_level_workq()
 {
-     if (num_presses == 1){  
+    if (num_presses == 0){
+        k_timer_start(&select_level_timer, K_MSEC(8000), K_MSEC(0)); // restart the timer to keep waiting
+    }
+    if (num_presses == 1){  
         //printk("Selected level 1!\r\n"); 
         next_state(eLEVEL1);
     }

@@ -140,8 +140,13 @@ uint8_t tone_done = 0;
 volatile uint8_t user_won =0;
 
 K_SEM_DEFINE(buzzer_initialize_sem, 0,1); // wait until buzzer is initiailzed 
-K_SEM_DEFINE(play_game_sem, 0,1); // wait until the thread is called
 K_MUTEX_DEFINE(tone_done_mutex); // wait until buzzer is initiailzed 
+K_MUTEX_DEFINE(play_game_mutex); 
+
+void device_side_translation()
+{
+    printk("rotated to side:%s \r\n", ORIENTATION_STRING[device_side]);
+}
 
 void buzzer_thread_func(void *d0,void *d1,void *d2)
 {
@@ -184,7 +189,7 @@ void buzzer_thread_func(void *d0,void *d1,void *d2)
                 break;
             case test: 
                 k_mutex_lock(&tone_done_mutex, K_FOREVER);
-                /*printk("side: %s\n", ORIENTATION_STRING[device_side]);
+                printk("side: %s\n", ORIENTATION_STRING[device_side]);
                 for (int i = 0; i < SIX_NOTES;i++)
                 {
                     if (device_side == user_action[i].side)
@@ -194,7 +199,7 @@ void buzzer_thread_func(void *d0,void *d1,void *d2)
                     }
                     else pwm_set_pulse_dt(&sBuzzer, 0);
                 }
-                pwm_set_pulse_dt(&sBuzzer, 0);*/
+                pwm_set_pulse_dt(&sBuzzer, 0);
                 k_mutex_unlock(&tone_done_mutex);
                 break;
             case congrats_sound:
@@ -218,19 +223,19 @@ void play_level(struct notes_highscore sNotes_Higherscore)
 {   
     uint8_t user_score = 0;
     int i = 0;
-    int device_side;
     srand(time(NULL)); // initialization of random num generator 
     int rand_num;
+    k_mutex_lock(&play_game_mutex, K_FOREVER);
     while(i < sNotes_Higherscore.notes_per_level)
     {
         rand_num = (rand() % (UPPER_BOUND - LOWER_BOUND + 1)) + LOWER_BOUND;
         pwm_set_dt(&sBuzzer,PWM_HZ(user_action[rand_num].note),PWM_HZ(user_action[rand_num].note)/2U);
         k_msleep(user_action[rand_num].duration);
-        pwm_set_pulse_dt(&sBuzzer, 0);
-        
         printk("PLAYED TONE. rotate to side:%s \r\n", ORIENTATION_STRING[user_action[rand_num].side]);
-        device_side = imu_data_processing();
-        
+        pwm_set_pulse_dt(&sBuzzer, 0);
+        k_msleep(2500);
+        imu_data_processing();
+        k_msleep(500);
         printk("rotated to side:%s \r\n", ORIENTATION_STRING[device_side]);
         if (device_side == user_action[rand_num].side)
         {
@@ -240,9 +245,13 @@ void play_level(struct notes_highscore sNotes_Higherscore)
         else {
             printk("Did not match!\r\n");
             led_error();
-            pwm_set_dt(&sBuzzer,PWM_HZ(C4),PWM_HZ(C4)/2U);
-            k_msleep(whole);
-            pwm_set_pulse_dt(&sBuzzer, 0);
+          //  pwm_set_dt(&sBuzzer,PWM_HZ(C4),PWM_HZ(C4)/2U);
+           // k_msleep(eigth);
+            //pwm_set_pulse_dt(&sBuzzer, 0);
+            //pwm_set_dt(&sBuzzer,PWM_HZ(C4),PWM_HZ(C4)/2U);
+           // k_msleep(eigth);
+           // pwm_set_pulse_dt(&sBuzzer, 0);
+            led_off();
         }
         if (user_score >= sNotes_Higherscore.highest_score)
         {
@@ -255,16 +264,19 @@ void play_level(struct notes_highscore sNotes_Higherscore)
             i++;
         }
     }
+    i = 0;
+    user_score = 0;
     printk("played the game..waking up state machine\r\n");
+    k_mutex_lock(&play_game_mutex, K_FOREVER);
+    //wake_state_machine_thd(); // call the thread before going to sleep 
+   // k_sleep(K_FOREVER); // frees up whatever thread is ready to run
 }
-
 
 K_THREAD_DEFINE(buzzer_thd,BUZZER_STACK,buzzer_thread_func,NULL,NULL,NULL,THREAD1_PRIORITY,0,5000);
 
 void play_startup_song()
 {
     eSong = startup_sound;
-    printk("woke up buzzer thread\r\n");
     k_wakeup(buzzer_thd);
     k_sleep(K_FOREVER); // sleep SM
 }
@@ -284,13 +296,13 @@ void play_test()
 {
     eSong = test;
     k_wakeup(buzzer_thd);
-    //k_sleep(K_FOREVER);
+    k_sleep(K_FOREVER);
 }
 void play_silence()
 {
     eSong = silence;
     k_wakeup(buzzer_thd);
-   // k_sleep(K_FOREVER);
+    k_sleep(K_FOREVER);
 }
 
 void wake_buzzer_thd()
@@ -300,17 +312,14 @@ void wake_buzzer_thd()
 
 void play_level_one()
 {
-    k_sem_give(&play_game_sem);
     play_level(level1_scoreboard); // SM is not asleep here
 }
 void play_level_two()
 {
-    k_sem_give(&play_game_sem);
     play_level(level2_scoreboard); // SM is not asleep here
 }
 void play_level_three()
 {
-    k_sem_give(&play_game_sem);
     play_level(level3_scoreboard); // SM is not asleep here
 }
 static int buzzer_init()
@@ -323,6 +332,7 @@ static int buzzer_init()
 	}
 
     k_sem_give(&buzzer_initialize_sem);
+    k_sleep(K_FOREVER); // frees up whatever thread is ready to run
     return 0;
 }
 

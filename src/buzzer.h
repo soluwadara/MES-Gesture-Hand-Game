@@ -13,6 +13,7 @@ extern void play_level_one();
 extern void play_level_two();
 extern void play_level_three();
 extern void wake_buzzer_thd();
+extern void device_side_translation();
 extern uint8_t tone_done;
 extern volatile uint8_t user_won;
 
